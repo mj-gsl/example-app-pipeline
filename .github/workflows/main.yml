@@ -12,6 +12,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: 'eu-central-1'  
+
     - name: Deploy to S3
       run: |
         aws s3 sync ./frontend/dist/frontend/browser/ s3://example-app-mj/ --delete
@@ -23,18 +30,27 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
+    - name: Login to Docker Hub
+      run: |
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
     - name: Build Docker Image
       run: |
         docker build -t my-backend ./backend
+        docker tag my-backend ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
 
     - name: Push to Docker Hub
       run: |
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-        docker push my-backend
+        docker push ${{ secrets.DOCKER_USERNAME }}/my-backend:latest
+
+    - name: Setup SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan 3.75.246.245 >> ~/.ssh/known_hosts
 
     - name: Deploy to EC2
       run: |
         scp -o StrictHostKeyChecking=no docker-compose.yml ubuntu@3.75.246.245:/home/ubuntu/
-        ssh -o StrictHostKeyChecking=no ubuntu@3.75.246.245 "docker-compose up -d"
-      env:
-        EC2_KEY: ${{ secrets.EC2_KEY }}
+        ssh -o StrictHostKeyChecking=no ubuntu@3.75.246.245 "docker-compose down && docker-compose pull && docker-compose up -d"

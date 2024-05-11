@@ -38,5 +38,9 @@
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.3",
     "typescript": "~5.4.2"
-  }
+  },
+  "description": "This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.5.",
+  "main": "tailwind.config.js",
+  "author": "",
+  "license": "ISC"
 }
